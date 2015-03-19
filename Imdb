@@ -1,0 +1,114 @@
+'''
+inherited from
+Author : Jay Rambhia
+email  : jayrambhia777@gmail.com
+Git    : https://github.com/jayrambhia
+gist   : https://gist.github.com/jayrambhia
+
+changed by 
+Author  : Somesh
+email   : somesh.km1@gmail.com	
+git 	: https://github.com/somesh101
+
+'''
+
+import urllib2
+from BeautifulSoup import BeautifulSoup
+from mechanize import Browser
+import re
+import os
+
+def getunicode(soup):
+	body=''
+	if isinstance(soup, unicode):
+		soup = soup.replace('&#39;',"'")
+		soup = soup.replace('&quot;','"')
+		soup = soup.replace('&nbsp;',' ')
+		body = body + soup
+	else:
+		if not soup.contents:
+			return ''
+		con_list = soup.contents
+		for con in con_list:
+			body = body + getunicode(con)
+	return body
+
+
+def find(movie):
+	info={"name":None,"rating":None}
+	movie_search = '+'.join(movie.split())
+    
+	base_url = 'http://www.imdb.com/find?q='
+	url = base_url+movie_search+'&s=all'
+    
+	title_search = re.compile('/title/tt\d+')
+	br = Browser() 
+                     
+	
+	try:
+		br.open(url)
+		link = br.find_link(url_regex = re.compile(r'/title/tt.*'))
+		res = br.follow_link(link)
+	    
+		soup = BeautifulSoup(res.read())
+	    
+		info["name"] = soup.find('title').text
+		rate = soup.find('span',itemprop='ratingValue')
+		info["rating"] = getunicode(rate)
+	except:
+		info["name"]=movie
+		info["rating"]="Not Found"
+	   	pass
+	finally: return info
+
+
+def Filter(each):
+	slang=["CAM","cam","Cam","HDcam","HDCam","xvid","XVid",
+               "XViD","Xvid","Unrated","[Unrated]","DVDRip","1080p",
+               "720p","DvDrip","English","Dual","Audio","Edition","BRRip",
+               "Subs","Hindi+English","X264","axxo","Extended","480p",
+               "BluRayx264","YIFY","BluRay","HD","HDRip","[Hindi",
+               "Eng","[Dual","Audio]","BR","Rip","BrRip","Br","[PKG]","XViD-COOKIEBOY",
+               "[UNRATED]DVDRip","[","]","-","tots","BluRay","BrRip","BOKUTOX",
+               "Micromkv","850MB","DDR","Exclusive","S4A","Eng","FXG","R6",
+               "aXXo","Unrated","x264"]
+	if each[-3:] in ["flv","mp4","avi","vob","mkv","mov","mpg","wmv"]:
+		each=each[:-4]
+	elif each[-4:] in ["mpeg","rmvb","webm"]:
+		each=each[:-5]
+	each=each.replace("."," ")
+	for a in slang:
+		try:
+			each=each.replace(a,"")
+		except: pass
+	print each
+	return each
+
+"get the movie folder"
+machine=None
+print "Enter the path of the folder :) or name of movie"
+Path=raw_input()
+if Path[0]=='/' or Path[1]==":":
+	if Path[0]=="/":
+		fw=open(Path+"/rating",'w')
+	else: fw=open(Path+"\\rating.txt",'w')
+	#machine = linux
+	#elif path[1]=':':
+	#	machine= windows
+	movies = os.listdir(Path)
+	movies.sort()
+	for each in movies:
+		Filter(each)
+		info=find(each)
+		print info["name"]+"\t\t\t\t"+ info["rating"]
+		try:
+			fw.write(info["name"]+"\t\t\t\t\t"+info["rating"]+"\n")
+		except:
+			fw.write(each+"\t\t\t\t\t"+info["rating"]+"\n")
+else:
+	Filter(Path)
+	info= find(Path)
+	print info["name"]+"\t\t\t\t"+ info["rating"]
+
+
+
